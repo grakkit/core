@@ -1,0 +1,30 @@
+/// <reference path="library/globals.d.ts" />
+import { data } from './library/data';
+import { file } from './library/file';
+import { type } from './library/type';
+import { array } from './library/array';
+import { chain } from './library/chain';
+import { fetch } from './library/fetch';
+import { unzip } from './library/unzip';
+import { simplify } from './library/simplify';
+import { transfer } from './library/transfer';
+import * as meta from './library/core';
+import * as task from './library/task';
+import * as format from './library/format';
+import * as console from './library/console';
+export declare const core: {
+    array: typeof array;
+    chain: typeof chain;
+    console: typeof console;
+    data: typeof data;
+    fetch: typeof fetch;
+    file: typeof file;
+    format: typeof format;
+    meta: typeof meta;
+    reload(): void;
+    simplify: typeof simplify;
+    task: typeof task;
+    transfer: typeof transfer;
+    type: typeof type;
+    unzip: typeof unzip;
+};
