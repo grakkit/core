@@ -4,10 +4,12 @@ declare const Polyglot: any;
 
 declare function atob (data: string): string
 declare function btoa (data: string): string
+declare function clearImmediate (handle?: number): void
 declare function clearInterval (handle?: number): void
 declare function clearTimeout (handle?: number): void
 declare function toString (): string
 declare function queueMicrotask (...args: any[]): void
+declare function setImmediate (script: string | Function, ...args: any[]): number
 declare function setInterval (script: string | Function, period?: number, ...args: any[]): number
 declare function setTimeout (script: string | Function, period?: number, ...args: any[]): number
 
