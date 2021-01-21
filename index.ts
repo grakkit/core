@@ -64,6 +64,41 @@ export type response = {
    stream(async: true): Promise<jiInputStream>;
 };
 
+const session: {
+   data: Map<string, any>;
+   poly: { index: number; list: Map<number, future> };
+   task: { list: Set<future>; tick: number };
+   type: Map<keyof types, any>;
+} = {
+   data: new Map(),
+   poly: { index: 0, list: new Map() },
+   task: { list: new Set(), tick: 0 },
+   type: new Map()
+};
+
+function type<X extends keyof types> (name: X): types[X] {
+   if (session.type.has(name)) {
+      return session.type.get(name);
+   } else {
+      const value = Java.type(name);
+      session.type.set(name, value);
+      return value;
+   }
+}
+
+const Class = type('java.lang.Class');
+const FileOutputStream = type('java.io.FileOutputStream');
+const Files = type('java.nio.file.Files');
+const Iterable = type('java.lang.Iterable');
+const Iterator = type('java.util.Iterator');
+const JavaString = type('java.lang.String');
+const Paths = type('java.nio.file.Paths');
+const Scanner = type('java.util.Scanner');
+const Spliterator = type('java.util.Spliterator');
+const StandardCopyOption = type('java.nio.file.StandardCopyOption');
+const URL = type('java.net.URL');
+const ZipInputStream = type('java.util.zip.ZipInputStream');
+
 function array (object: any): any[] {
    if (object instanceof Array) {
       return [ ...object ];
@@ -515,18 +550,6 @@ function simplify (object: any, placeholder?: any, objects?: Set<any>) {
    }
 }
 
-const session: {
-   data: Map<string, any>;
-   poly: { index: number; list: Map<number, future> };
-   task: { list: Set<future>; tick: number };
-   type: Map<keyof types, any>;
-} = {
-   data: new Map(),
-   poly: { index: 0, list: new Map() },
-   task: { list: new Set(), tick: 0 },
-   type: new Map()
-};
-
 function sync<X> (script: (...args: any[]) => Promise<X>): Promise<X> {
    return new Promise((resolve, reject) => {
       Core.sync(() => script().then(resolve).catch(reject));
@@ -578,16 +601,6 @@ function transfer (from: string | record | jiFile, to: string | record | jiFile,
    });
 }
 
-function type<X extends keyof types> (name: X): types[X] {
-   if (session.type.has(name)) {
-      return session.type.get(name);
-   } else {
-      const value = Java.type(name);
-      session.type.set(name, value);
-      return value;
-   }
-}
-
 function unzip (from: jiInputStream, to: string | record | jiFile) {
    return sync(async () => {
       to = file(to);
@@ -624,19 +637,6 @@ function unzip (from: jiInputStream, to: string | record | jiFile) {
       }
    });
 }
-
-const Class = type('java.lang.Class');
-const FileOutputStream = type('java.io.FileOutputStream');
-const Files = type('java.nio.file.Files');
-const Iterable = type('java.lang.Iterable');
-const Iterator = type('java.util.Iterator');
-const JavaString = type('java.lang.String');
-const Paths = type('java.nio.file.Paths');
-const Scanner = type('java.util.Scanner');
-const Spliterator = type('java.util.Spliterator');
-const StandardCopyOption = type('java.nio.file.StandardCopyOption');
-const URL = type('java.net.URL');
-const ZipInputStream = type('java.util.zip.ZipInputStream');
 
 chain(void 0, (none, next) => {
    Core.push(next);
@@ -750,7 +750,9 @@ Object.assign(globalThis, {
 export const core = {
    /** Converts array-like objects or iterators into arrays. */
    array,
-   /** It's complicated. */
+   /** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
+    * callback function passes its argument as well as a reference to the callback function itself into the chain
+    * method. Finally, the callback function is called with the initial value. */
    chain,
    /** @deprecated */
    console: dev,

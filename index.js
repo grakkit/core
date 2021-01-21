@@ -2,6 +2,34 @@
 /// <reference path="./env" />
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.core = void 0;
+const session = {
+    data: new Map(),
+    poly: { index: 0, list: new Map() },
+    task: { list: new Set(), tick: 0 },
+    type: new Map()
+};
+function type(name) {
+    if (session.type.has(name)) {
+        return session.type.get(name);
+    }
+    else {
+        const value = Java.type(name);
+        session.type.set(name, value);
+        return value;
+    }
+}
+const Class = type('java.lang.Class');
+const FileOutputStream = type('java.io.FileOutputStream');
+const Files = type('java.nio.file.Files');
+const Iterable = type('java.lang.Iterable');
+const Iterator = type('java.util.Iterator');
+const JavaString = type('java.lang.String');
+const Paths = type('java.nio.file.Paths');
+const Scanner = type('java.util.Scanner');
+const Spliterator = type('java.util.Spliterator');
+const StandardCopyOption = type('java.nio.file.StandardCopyOption');
+const URL = type('java.net.URL');
+const ZipInputStream = type('java.util.zip.ZipInputStream');
 function array(object) {
     if (object instanceof Array) {
         return [...object];
@@ -479,12 +507,6 @@ function simplify(object, placeholder, objects) {
         return object;
     }
 }
-const session = {
-    data: new Map(),
-    poly: { index: 0, list: new Map() },
-    task: { list: new Set(), tick: 0 },
-    type: new Map()
-};
 function sync(script) {
     return new Promise((resolve, reject) => {
         Core.sync(() => script().then(resolve).catch(reject));
@@ -526,16 +548,6 @@ function transfer(from, to, operation) {
         });
     });
 }
-function type(name) {
-    if (session.type.has(name)) {
-        return session.type.get(name);
-    }
-    else {
-        const value = Java.type(name);
-        session.type.set(name, value);
-        return value;
-    }
-}
 function unzip(from, to) {
     return sync(async () => {
         to = file(to);
@@ -576,18 +588,6 @@ function unzip(from, to) {
         }
     });
 }
-const Class = type('java.lang.Class');
-const FileOutputStream = type('java.io.FileOutputStream');
-const Files = type('java.nio.file.Files');
-const Iterable = type('java.lang.Iterable');
-const Iterator = type('java.util.Iterator');
-const JavaString = type('java.lang.String');
-const Paths = type('java.nio.file.Paths');
-const Scanner = type('java.util.Scanner');
-const Spliterator = type('java.util.Spliterator');
-const StandardCopyOption = type('java.nio.file.StandardCopyOption');
-const URL = type('java.net.URL');
-const ZipInputStream = type('java.util.zip.ZipInputStream');
 chain(void 0, (none, next) => {
     Core.push(next);
     for (const task of session.task.list) {
@@ -673,7 +673,9 @@ Object.assign(globalThis, {
 exports.core = {
     /** Converts array-like objects or iterators into arrays. */
     array,
-    /** It's complicated. */
+    /** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
+     * callback function passes its argument as well as a reference to the callback function itself into the chain
+     * method. Finally, the callback function is called with the initial value. */
     chain,
     /** @deprecated */
     console: dev,

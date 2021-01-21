@@ -63,6 +63,7 @@ export declare type response = {
     /** Returns the response stream. */
     stream(async: true): Promise<jiInputStream>;
 };
+declare function type<X extends keyof types>(name: X): types[X];
 declare function array(object: any): any[];
 declare function chain<X, Y extends (input: X, chain: (object: X) => ReturnType<Y>) => any>(base: X, modifier: Y): void;
 declare function data(path: string, ...more: string[]): any;
@@ -72,13 +73,14 @@ declare function reload(): void;
 declare function simplify(object: any, placeholder?: any, objects?: Set<any>): any;
 declare function sync<X>(script: (...args: any[]) => Promise<X>): Promise<X>;
 declare function transfer(from: string | record | jiFile, to: string | record | jiFile, operation: 'move' | 'copy'): Promise<void>;
-declare function type<X extends keyof types>(name: X): types[X];
 declare function unzip(from: jiInputStream, to: string | record | jiFile): Promise<void>;
 /** A standard library with various utility functions. */
 export declare const core: {
     /** Converts array-like objects or iterators into arrays. */
     array: typeof array;
-    /** It's complicated. */
+    /** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
+     * callback function passes its argument as well as a reference to the callback function itself into the chain
+     * method. Finally, the callback function is called with the initial value. */
     chain: typeof chain;
     /** @deprecated */
     console: {
