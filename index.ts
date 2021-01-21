@@ -46,7 +46,7 @@ export type record = {
    write(content: string, async: true): Promise<record>;
 };
 
-/** A fetch response. */
+/** A web response. */
 export type response = {
    /** The connection instance used to make this request. */
    net: jnHttpURLConnection;
@@ -64,7 +64,8 @@ export type response = {
    stream(async: true): Promise<jiInputStream>;
 };
 
-const session: {
+/** A session container for this module. */
+export const session: {
    data: Map<string, any>;
    poly: { index: number; list: Map<number, future> };
    task: { list: Set<future>; tick: number };
@@ -76,7 +77,8 @@ const session: {
    type: new Map()
 };
 
-function type<X extends keyof types> (name: X): types[X] {
+/** Imports the specified type from java. */
+export function type<X extends keyof types> (name: X): types[X] {
    if (session.type.has(name)) {
       return session.type.get(name);
    } else {
@@ -99,7 +101,8 @@ const StandardCopyOption = type('java.nio.file.StandardCopyOption');
 const URL = type('java.net.URL');
 const ZipInputStream = type('java.util.zip.ZipInputStream');
 
-function array (object: any): any[] {
+/** Converts array-like objects or iterators into arrays. */
+export function array (object: any): any[] {
    if (object instanceof Array) {
       return [ ...object ];
    } else if (object instanceof Iterable) {
@@ -119,12 +122,16 @@ function array (object: any): any[] {
    }
 }
 
-function chain<X, Y extends (input: X, chain: (object: X) => ReturnType<Y>) => any> (base: X, modifier: Y) {
+/** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
+ * callback function passes its argument as well as a reference to the callback function itself into the chain
+ * method. Finally, the callback function is called with the initial value. */
+export function chain<X, Y extends (input: X, chain: (object: X) => ReturnType<Y>) => any> (base: X, modifier: Y) {
    const chain = (object: X) => modifier(object, chain);
    chain(base);
 }
 
-function data (path: string, ...more: string[]) {
+/** Stores data on a per-path basis. */
+export function data (path: string, ...more: string[]) {
    const name = Paths.get(path, ...more).normalize().toString();
    if (session.data.has(name)) {
       return session.data.get(name);
@@ -135,7 +142,8 @@ function data (path: string, ...more: string[]) {
    }
 }
 
-const dev = {
+/** Tools for creating a single-input developer tools terminal. */
+export const dev = {
    /** Executes the given code and returns the result. */
    execute (context: any, ...args: string[]) {
       const self = globalThis.hasOwnProperty('self');
@@ -273,7 +281,54 @@ const dev = {
    }
 };
 
-function file (path: string | record | jiFile, ...more: string[]) {
+/** Sends a GET request to the given URL. */
+export function fetch (link: string) {
+   //@ts-expect-error
+   const net: jnHttpURLConnection = new URL(link).openConnection();
+   net.setDoOutput(true);
+   net.setRequestMethod('GET');
+   net.setInstanceFollowRedirects(true);
+   const thing: response = {
+      net,
+      json (async?: boolean) {
+         if (async) {
+            return sync(async () => thing.json());
+         } else {
+            try {
+               return JSON.parse(thing.read());
+            } catch (error) {
+               throw error;
+            }
+         }
+      },
+      //@ts-expect-error
+      read (async?: boolean) {
+         if (async) {
+            return sync(async () => thing.read());
+         } else {
+            return new Scanner(thing.stream()).useDelimiter('\\A').next();
+         }
+      },
+      //@ts-expect-error
+      stream (async?: boolean) {
+         if (async) {
+            return sync(async () => thing.stream());
+         } else {
+            const code = net.getResponseCode();
+            switch (code) {
+               case 200:
+                  return net.getInputStream();
+               default:
+                  throw new ReferenceError(`${code} ${net.getResponseMessage()}`);
+            }
+         }
+      }
+   };
+   return thing;
+}
+
+/** A utility wrapper for paths and files. */
+export function file (path: string | record | jiFile, ...more: string[]) {
    path = typeof path === 'string' ? path : 'io' in path ? path.path : path.getPath();
    const io = Paths.get(path, ...more).normalize().toFile();
    const thing: record = {
@@ -359,52 +414,8 @@ function file (path: string | record | jiFile, ...more: string[]) {
    return thing;
 }
 
-function fetch (link: string) {
-   //@ts-expect-error
-   const net: jnHttpURLConnection = new URL(link).openConnection();
-   net.setDoOutput(true);
-   net.setRequestMethod('GET');
-   net.setInstanceFollowRedirects(true);
-   const thing: response = {
-      net,
-      json (async?: boolean) {
-         if (async) {
-            return sync(async () => thing.json());
-         } else {
-            try {
-               return JSON.parse(thing.read());
-            } catch (error) {
-               throw error;
-            }
-         }
-      },
-      //@ts-expect-error
-      read (async?: boolean) {
-         if (async) {
-            return sync(async () => thing.read());
-         } else {
-            return new Scanner(thing.stream()).useDelimiter('\\A').next();
-         }
-      },
-      //@ts-expect-error
-      stream (async?: boolean) {
-         if (async) {
-            return sync(async () => thing.stream());
-         } else {
-            const code = net.getResponseCode();
-            switch (code) {
-               case 200:
-                  return net.getInputStream();
-               default:
-                  throw new ReferenceError(`${code} ${net.getResponseMessage()}`);
-            }
-         }
-      }
-   };
-   return thing;
-}
-
-const format = {
+/** Formatting tools for script feedback. */
+export const format = {
    /** Reformats complex error messages into layman-friendly ones. */
    error (error: any) {
       let type = 'Error';
@@ -528,13 +539,16 @@ const format = {
    }
 };
 
-function reload () {
+/** Reloads the JS environment. */
+export function reload () {
    Core.push(Core.swap);
 }
 
-const root = file(Core.getRoot());
+/** The root folder of the environment. */
+export const root = file(Core.getRoot());
 
-function simplify (object: any, placeholder?: any, objects?: Set<any>) {
+/** Recursively removes or replaces the circular references in an object. */
+export function simplify (object: any, placeholder?: any, objects?: Set<any>) {
    if (object && typeof object === 'object') {
       objects || (objects = new Set());
       if (objects.has(object)) {
@@ -550,13 +564,15 @@ function simplify (object: any, placeholder?: any, objects?: Set<any>) {
    }
 }
 
-function sync<X> (script: (...args: any[]) => Promise<X>): Promise<X> {
+/** Runs an async function in another thread. */
+export function sync<X> (script: (...args: any[]) => Promise<X>): Promise<X> {
    return new Promise((resolve, reject) => {
       Core.sync(() => script().then(resolve).catch(reject));
    });
 }
 
-const task = {
+/** A simple task scheduler. */
+export const task = {
    /** Cancels a previously scheduled task. */
    cancel (handle: future) {
       session.task.list.delete(handle);
@@ -581,7 +597,8 @@ const task = {
    }
 };
 
-function transfer (from: string | record | jiFile, to: string | record | jiFile, operation: 'move' | 'copy') {
+/** Moves or copies a file or folder to a new destination. */
+export function transfer (from: string | record | jiFile, to: string | record | jiFile, operation: 'move' | 'copy') {
    return sync(async () => {
       from = typeof from === 'string' ? file(from).io : 'io' in from ? from.io : from;
       to = typeof to === 'string' ? file(to).io : 'io' in to ? to.io : to;
@@ -601,7 +618,8 @@ function transfer (from: string | record | jiFile, to: string | record | jiFile,
    });
 }
 
-function unzip (from: jiInputStream, to: string | record | jiFile) {
+/** Unzips the input stream's archive (if any) to a new destination. */
+export function unzip (from: jiInputStream, to: string | record | jiFile) {
    return sync(async () => {
       to = file(to);
       let entry: juzZipEntry;
@@ -746,27 +764,16 @@ Object.assign(globalThis, {
    window: globalThis
 });
 
-/** A standard library with various utility functions. */
+/** @deprecated */
 export const core = {
-   /** Converts array-like objects or iterators into arrays. */
    array,
-   /** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
-    * callback function passes its argument as well as a reference to the callback function itself into the chain
-    * method. Finally, the callback function is called with the initial value. */
    chain,
-   /** @deprecated */
    console: dev,
-   /** Stores data on a per-path basis. */
    data,
-   /** Tools for creating a single-input developer tools terminal. */
    dev,
-   /** Sends a GET request to the given URL. */
    fetch,
-   /** A utility wrapper for paths and files. */
    file,
-   /** Formatting tools for script feedback. */
    format,
-   /** @deprecated */
    meta: {
       hook (script: Function) {
          Core.hook(script);
@@ -777,22 +784,13 @@ export const core = {
       root,
       sync
    },
-   /** Reloads the JS environment. */
    reload,
-   /** The root folder of the environment. */
    root,
-   /** Recursively removes or replaces the circular references in an object. */
    simplify,
-   /** A session container for this module. */
    session,
-   /** Runs an async function in another thread. */
    sync,
-   /** A simple task scheduler. */
    task,
-   /** Moves or copies a file or folder to a new destination. */
    transfer,
-   /** Imports the specified type from java. */
    type,
-   /** Unzips the input stream's archive (if any) to a new destination. */
    unzip
 };

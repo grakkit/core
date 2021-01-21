@@ -1,23 +1,26 @@
 "use strict";
 /// <reference path="./env" />
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.core = void 0;
-const session = {
+exports.core = exports.unzip = exports.transfer = exports.task = exports.sync = exports.simplify = exports.root = exports.reload = exports.format = exports.file = exports.fetch = exports.dev = exports.data = exports.chain = exports.array = exports.type = exports.session = void 0;
+/** A session container for this module. */
+exports.session = {
     data: new Map(),
     poly: { index: 0, list: new Map() },
     task: { list: new Set(), tick: 0 },
     type: new Map()
 };
+/** Imports the specified type from java. */
 function type(name) {
-    if (session.type.has(name)) {
-        return session.type.get(name);
+    if (exports.session.type.has(name)) {
+        return exports.session.type.get(name);
     }
     else {
         const value = Java.type(name);
-        session.type.set(name, value);
+        exports.session.type.set(name, value);
         return value;
     }
 }
+exports.type = type;
 const Class = type('java.lang.Class');
 const FileOutputStream = type('java.io.FileOutputStream');
 const Files = type('java.nio.file.Files');
@@ -30,6 +33,7 @@ const Spliterator = type('java.util.Spliterator');
 const StandardCopyOption = type('java.nio.file.StandardCopyOption');
 const URL = type('java.net.URL');
 const ZipInputStream = type('java.util.zip.ZipInputStream');
+/** Converts array-like objects or iterators into arrays. */
 function array(object) {
     if (object instanceof Array) {
         return [...object];
@@ -52,22 +56,30 @@ function array(object) {
         return null;
     }
 }
+exports.array = array;
+/** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
+ * callback function passes its argument as well as a reference to the callback function itself into the chain
+ * method. Finally, the callback function is called with the initial value. */
 function chain(base, modifier) {
     const chain = (object) => modifier(object, chain);
     chain(base);
 }
+exports.chain = chain;
+/** Stores data on a per-path basis. */
 function data(path, ...more) {
     const name = Paths.get(path, ...more).normalize().toString();
-    if (session.data.has(name)) {
-        return session.data.get(name);
+    if (exports.session.data.has(name)) {
+        return exports.session.data.get(name);
     }
     else {
-        const value = file(root, 'data', `${name}.json`).json() || {};
-        session.data.set(name, value);
+        const value = file(exports.root, 'data', `${name}.json`).json() || {};
+        exports.session.data.set(name, value);
         return value;
     }
 }
-const dev = {
+exports.data = data;
+/** Tools for creating a single-input developer tools terminal. */
+exports.dev = {
     /** Executes the given code and returns the result. */
     execute(context, ...args) {
         const self = globalThis.hasOwnProperty('self');
@@ -75,11 +87,11 @@ const dev = {
         try {
             const result = Polyglot.eval('js', args.join(' '));
             self || delete globalThis.self;
-            return format.output(result);
+            return exports.format.output(result);
         }
         catch (whoops) {
             self || delete globalThis.self;
-            return format.error(whoops);
+            return exports.format.error(whoops);
         }
     },
     /** Returns a set of completions for the given input. */
@@ -216,6 +228,57 @@ const dev = {
         }
     }
 };
+/** Sends a GET request to the given URL. */
+function fetch(link) {
+    //@ts-expect-error
+    const net = new URL(link).openConnection();
+    net.setDoOutput(true);
+    net.setRequestMethod('GET');
+    net.setInstanceFollowRedirects(true);
+    const thing = {
+        net,
+        json(async) {
+            if (async) {
+                return sync(async () => thing.json());
+            }
+            else {
+                try {
+                    return JSON.parse(thing.read());
+                }
+                catch (error) {
+                    throw error;
+                }
+            }
+        },
+        //@ts-expect-error
+        read(async) {
+            if (async) {
+                return sync(async () => thing.read());
+            }
+            else {
+                return new Scanner(thing.stream()).useDelimiter('\\A').next();
+            }
+        },
+        //@ts-expect-error
+        stream(async) {
+            if (async) {
+                return sync(async () => thing.stream());
+            }
+            else {
+                const code = net.getResponseCode();
+                switch (code) {
+                    case 200:
+                        return net.getInputStream();
+                    default:
+                        throw new ReferenceError(`${code} ${net.getResponseMessage()}`);
+                }
+            }
+        }
+    };
+    return thing;
+}
+exports.fetch = fetch;
+/** A utility wrapper for paths and files. */
 function file(path, ...more) {
     path = typeof path === 'string' ? path : 'io' in path ? path.path : path.getPath();
     const io = Paths.get(path, ...more).normalize().toFile();
@@ -305,55 +368,9 @@ function file(path, ...more) {
     };
     return thing;
 }
-function fetch(link) {
-    //@ts-expect-error
-    const net = new URL(link).openConnection();
-    net.setDoOutput(true);
-    net.setRequestMethod('GET');
-    net.setInstanceFollowRedirects(true);
-    const thing = {
-        net,
-        json(async) {
-            if (async) {
-                return sync(async () => thing.json());
-            }
-            else {
-                try {
-                    return JSON.parse(thing.read());
-                }
-                catch (error) {
-                    throw error;
-                }
-            }
-        },
-        //@ts-expect-error
-        read(async) {
-            if (async) {
-                return sync(async () => thing.read());
-            }
-            else {
-                return new Scanner(thing.stream()).useDelimiter('\\A').next();
-            }
-        },
-        //@ts-expect-error
-        stream(async) {
-            if (async) {
-                return sync(async () => thing.stream());
-            }
-            else {
-                const code = net.getResponseCode();
-                switch (code) {
-                    case 200:
-                        return net.getInputStream();
-                    default:
-                        throw new ReferenceError(`${code} ${net.getResponseMessage()}`);
-                }
-            }
-        }
-    };
-    return thing;
-}
-const format = {
+exports.file = file;
+/** Formatting tools for script feedback. */
+exports.format = {
     /** Reformats complex error messages into layman-friendly ones. */
     error(error) {
         let type = 'Error';
@@ -458,15 +475,15 @@ const format = {
             switch (toString.call(object)) {
                 case '[object Array]':
                     return `[ ${[...object]
-                        .map((value) => format.output(object === value ? circular : value, true))
+                        .map((value) => exports.format.output(object === value ? circular : value, true))
                         .join(', ')} ]`;
                 case '[object Object]':
                     return `{ ${[
                         ...Object.getOwnPropertyNames(object).map((key) => {
-                            return `${key}: ${format.output(object === object[key] ? circular : object[key], true)}`;
+                            return `${key}: ${exports.format.output(object === object[key] ? circular : object[key], true)}`;
                         }),
                         ...Object.getOwnPropertySymbols(object).map((key) => {
-                            return `${format.output(key, true)}: ${format.output(object === object[key] ? circular : object[key], true)}`;
+                            return `${exports.format.output(key, true)}: ${exports.format.output(object === object[key] ? circular : object[key], true)}`;
                         })
                     ].join(', ')} }`;
                 case '[object Function]':
@@ -476,19 +493,23 @@ const format = {
                 default:
                     const list = array(object);
                     if (list) {
-                        return format.output(list);
+                        return exports.format.output(list);
                     }
                     else {
-                        return format.output(object, true);
+                        return exports.format.output(object, true);
                     }
             }
         }
     }
 };
+/** Reloads the JS environment. */
 function reload() {
     Core.push(Core.swap);
 }
-const root = file(Core.getRoot());
+exports.reload = reload;
+/** The root folder of the environment. */
+exports.root = file(Core.getRoot());
+/** Recursively removes or replaces the circular references in an object. */
 function simplify(object, placeholder, objects) {
     if (object && typeof object === 'object') {
         objects || (objects = new Set());
@@ -507,19 +528,23 @@ function simplify(object, placeholder, objects) {
         return object;
     }
 }
+exports.simplify = simplify;
+/** Runs an async function in another thread. */
 function sync(script) {
     return new Promise((resolve, reject) => {
         Core.sync(() => script().then(resolve).catch(reject));
     });
 }
-const task = {
+exports.sync = sync;
+/** A simple task scheduler. */
+exports.task = {
     /** Cancels a previously scheduled task. */
     cancel(handle) {
-        session.task.list.delete(handle);
+        exports.session.task.list.delete(handle);
     },
     /** Schedules a task to run infinitely at a set interval. */
     interval(script, period = 0, ...args) {
-        const future = task.timeout((...args) => {
+        const future = exports.task.timeout((...args) => {
             future.tick += Math.ceil(period < 1 ? 1 : period);
             script(...args);
         }, 0, ...args);
@@ -527,11 +552,12 @@ const task = {
     },
     /** Schedules a task to run after a set timeout. */
     timeout(script, period = 0, ...args) {
-        const future = { tick: session.task.tick + Math.ceil(period < 0 ? 0 : period), args, script };
-        session.task.list.add(future);
+        const future = { tick: exports.session.task.tick + Math.ceil(period < 0 ? 0 : period), args, script };
+        exports.session.task.list.add(future);
         return future;
     }
 };
+/** Moves or copies a file or folder to a new destination. */
 function transfer(from, to, operation) {
     return sync(async () => {
         from = typeof from === 'string' ? file(from).io : 'io' in from ? from.io : from;
@@ -548,6 +574,8 @@ function transfer(from, to, operation) {
         });
     });
 }
+exports.transfer = transfer;
+/** Unzips the input stream's archive (if any) to a new destination. */
 function unzip(from, to) {
     return sync(async () => {
         to = file(to);
@@ -588,13 +616,14 @@ function unzip(from, to) {
         }
     });
 }
+exports.unzip = unzip;
 chain(void 0, (none, next) => {
     Core.push(next);
-    for (const task of session.task.list) {
-        if (session.task.tick > task.tick) {
-            session.task.list.delete(task);
+    for (const task of exports.session.task.list) {
+        if (exports.session.task.tick > task.tick) {
+            exports.session.task.list.delete(task);
         }
-        else if (session.task.tick === task.tick) {
+        else if (exports.session.task.tick === task.tick) {
             try {
                 task.script(...task.args);
             }
@@ -604,11 +633,11 @@ chain(void 0, (none, next) => {
             }
         }
     }
-    ++session.task.tick;
+    ++exports.session.task.tick;
 });
 Core.hook(() => {
-    for (const [name] of session.data) {
-        file(root, 'data', `${name}.json`).entry().write(JSON.stringify(simplify(session.data.get(name))));
+    for (const [name] of exports.session.data) {
+        file(exports.root, 'data', `${name}.json`).entry().write(JSON.stringify(simplify(exports.session.data.get(name))));
     }
 });
 const base = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
@@ -639,57 +668,46 @@ Object.assign(globalThis, {
         return output;
     },
     clearImmediate(handle) {
-        task.cancel(session.poly.list.get(handle));
+        exports.task.cancel(exports.session.poly.list.get(handle));
     },
     clearInterval(handle) {
-        task.cancel(session.poly.list.get(handle));
+        exports.task.cancel(exports.session.poly.list.get(handle));
     },
     clearTimeout(handle) {
-        task.cancel(session.poly.list.get(handle));
+        exports.task.cancel(exports.session.poly.list.get(handle));
     },
     global: globalThis,
     queueMicrotask(callback) {
         promise.then(callback).catch((error) => {
-            task.timeout(() => {
+            exports.task.timeout(() => {
                 throw error;
             });
         });
     },
     setInterval(script, period = 0, ...args) {
-        session.poly.list.set(session.poly.index, task.interval(typeof script === 'string' ? () => Polyglot.eval('js', script) : script, Math.ceil(period / 50), ...args));
-        return session.poly.index++;
+        exports.session.poly.list.set(exports.session.poly.index, exports.task.interval(typeof script === 'string' ? () => Polyglot.eval('js', script) : script, Math.ceil(period / 50), ...args));
+        return exports.session.poly.index++;
     },
     setTimeout(script, period = 0, ...args) {
-        session.poly.list.set(session.poly.index, task.timeout(typeof script === 'string' ? () => Polyglot.eval('js', script) : script, Math.ceil(period / 50), ...args));
-        return session.poly.index++;
+        exports.session.poly.list.set(exports.session.poly.index, exports.task.timeout(typeof script === 'string' ? () => Polyglot.eval('js', script) : script, Math.ceil(period / 50), ...args));
+        return exports.session.poly.index++;
     },
     setImmediate(script, ...args) {
-        session.poly.list.set(session.poly.index, task.timeout(typeof script === 'string' ? () => Polyglot.eval('js', script) : script, 0, ...args));
-        return session.poly.index++;
+        exports.session.poly.list.set(exports.session.poly.index, exports.task.timeout(typeof script === 'string' ? () => Polyglot.eval('js', script) : script, 0, ...args));
+        return exports.session.poly.index++;
     },
     window: globalThis
 });
-/** A standard library with various utility functions. */
+/** @deprecated */
 exports.core = {
-    /** Converts array-like objects or iterators into arrays. */
     array,
-    /** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
-     * callback function passes its argument as well as a reference to the callback function itself into the chain
-     * method. Finally, the callback function is called with the initial value. */
     chain,
-    /** @deprecated */
-    console: dev,
-    /** Stores data on a per-path basis. */
+    console: exports.dev,
     data,
-    /** Tools for creating a single-input developer tools terminal. */
-    dev,
-    /** Sends a GET request to the given URL. */
+    dev: exports.dev,
     fetch,
-    /** A utility wrapper for paths and files. */
     file,
-    /** Formatting tools for script feedback. */
-    format,
-    /** @deprecated */
+    format: exports.format,
     meta: {
         hook(script) {
             Core.hook(script);
@@ -697,25 +715,16 @@ exports.core = {
         push(script) {
             Core.push(script);
         },
-        root,
+        root: exports.root,
         sync
     },
-    /** Reloads the JS environment. */
     reload,
-    /** The root folder of the environment. */
-    root,
-    /** Recursively removes or replaces the circular references in an object. */
+    root: exports.root,
     simplify,
-    /** A session container for this module. */
-    session,
-    /** Runs an async function in another thread. */
+    session: exports.session,
     sync,
-    /** A simple task scheduler. */
-    task,
-    /** Moves or copies a file or folder to a new destination. */
+    task: exports.task,
     transfer,
-    /** Imports the specified type from java. */
     type,
-    /** Unzips the input stream's archive (if any) to a new destination. */
     unzip
 };

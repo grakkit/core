@@ -46,7 +46,7 @@ export declare type record = {
     /** Writes the given content to the file (if any) at the current path. */
     write(content: string, async: true): Promise<record>;
 };
-/** A fetch response. */
+/** A web response. */
 export declare type response = {
     /** The connection instance used to make this request. */
     net: jnHttpURLConnection;
@@ -63,66 +63,110 @@ export declare type response = {
     /** Returns the response stream. */
     stream(async: true): Promise<jiInputStream>;
 };
-declare function type<X extends keyof types>(name: X): types[X];
-declare function array(object: any): any[];
-declare function chain<X, Y extends (input: X, chain: (object: X) => ReturnType<Y>) => any>(base: X, modifier: Y): void;
-declare function data(path: string, ...more: string[]): any;
-declare function file(path: string | record | jiFile, ...more: string[]): record;
-declare function fetch(link: string): response;
-declare function reload(): void;
-declare function simplify(object: any, placeholder?: any, objects?: Set<any>): any;
-declare function sync<X>(script: (...args: any[]) => Promise<X>): Promise<X>;
-declare function transfer(from: string | record | jiFile, to: string | record | jiFile, operation: 'move' | 'copy'): Promise<void>;
-declare function unzip(from: jiInputStream, to: string | record | jiFile): Promise<void>;
-/** A standard library with various utility functions. */
+/** A session container for this module. */
+export declare const session: {
+    data: Map<string, any>;
+    poly: {
+        index: number;
+        list: Map<number, future>;
+    };
+    task: {
+        list: Set<future>;
+        tick: number;
+    };
+    type: Map<keyof types, any>;
+};
+/** Imports the specified type from java. */
+export declare function type<X extends keyof types>(name: X): types[X];
+/** Converts array-like objects or iterators into arrays. */
+export declare function array(object: any): any[];
+/** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
+ * callback function passes its argument as well as a reference to the callback function itself into the chain
+ * method. Finally, the callback function is called with the initial value. */
+export declare function chain<X, Y extends (input: X, chain: (object: X) => ReturnType<Y>) => any>(base: X, modifier: Y): void;
+/** Stores data on a per-path basis. */
+export declare function data(path: string, ...more: string[]): any;
+/** Tools for creating a single-input developer tools terminal. */
+export declare const dev: {
+    /** Executes the given code and returns the result. */
+    execute(context: any, ...args: string[]): string;
+    /** Returns a set of completions for the given input. */
+    complete(context: any, ...args: string[]): string[];
+};
+/** Sends a GET request to the given URL. */
+export declare function fetch(link: string): response;
+/** A utility wrapper for paths and files. */
+export declare function file(path: string | record | jiFile, ...more: string[]): record;
+/** Formatting tools for script feedback. */
+export declare const format: {
+    /** Reformats complex error messages into layman-friendly ones. */
+    error(error: any): string;
+    /** A pretty-printer for JavaScript objects. */
+    output(object: any, condense?: boolean): string;
+};
+/** Reloads the JS environment. */
+export declare function reload(): void;
+/** The root folder of the environment. */
+export declare const root: record;
+/** Recursively removes or replaces the circular references in an object. */
+export declare function simplify(object: any, placeholder?: any, objects?: Set<any>): any;
+/** Runs an async function in another thread. */
+export declare function sync<X>(script: (...args: any[]) => Promise<X>): Promise<X>;
+/** A simple task scheduler. */
+export declare const task: {
+    /** Cancels a previously scheduled task. */
+    cancel(handle: future): void;
+    /** Schedules a task to run infinitely at a set interval. */
+    interval(script: Function, period?: number, ...args: any[]): {
+        tick: number;
+        args: any[];
+        script: Function;
+    };
+    /** Schedules a task to run after a set timeout. */
+    timeout(script: Function, period?: number, ...args: any[]): {
+        tick: number;
+        args: any[];
+        script: Function;
+    };
+};
+/** Moves or copies a file or folder to a new destination. */
+export declare function transfer(from: string | record | jiFile, to: string | record | jiFile, operation: 'move' | 'copy'): Promise<void>;
+/** Unzips the input stream's archive (if any) to a new destination. */
+export declare function unzip(from: jiInputStream, to: string | record | jiFile): Promise<void>;
+/** @deprecated */
 export declare const core: {
-    /** Converts array-like objects or iterators into arrays. */
     array: typeof array;
-    /** Takes 2 arguments, an initial value and a chain method. Creates a callback function which takes 1 argument. The
-     * callback function passes its argument as well as a reference to the callback function itself into the chain
-     * method. Finally, the callback function is called with the initial value. */
     chain: typeof chain;
-    /** @deprecated */
     console: {
         /** Executes the given code and returns the result. */
         execute(context: any, ...args: string[]): string;
         /** Returns a set of completions for the given input. */
         complete(context: any, ...args: string[]): string[];
     };
-    /** Stores data on a per-path basis. */
     data: typeof data;
-    /** Tools for creating a single-input developer tools terminal. */
     dev: {
         /** Executes the given code and returns the result. */
         execute(context: any, ...args: string[]): string;
         /** Returns a set of completions for the given input. */
         complete(context: any, ...args: string[]): string[];
     };
-    /** Sends a GET request to the given URL. */
     fetch: typeof fetch;
-    /** A utility wrapper for paths and files. */
     file: typeof file;
-    /** Formatting tools for script feedback. */
     format: {
         /** Reformats complex error messages into layman-friendly ones. */
         error(error: any): string;
         /** A pretty-printer for JavaScript objects. */
         output(object: any, condense?: boolean): string;
     };
-    /** @deprecated */
     meta: {
         hook(script: Function): void;
         push(script: Function): void;
         root: record;
         sync: typeof sync;
     };
-    /** Reloads the JS environment. */
     reload: typeof reload;
-    /** The root folder of the environment. */
     root: record;
-    /** Recursively removes or replaces the circular references in an object. */
     simplify: typeof simplify;
-    /** A session container for this module. */
     session: {
         data: Map<string, any>;
         poly: {
@@ -135,9 +179,7 @@ export declare const core: {
         };
         type: Map<keyof types, any>;
     };
-    /** Runs an async function in another thread. */
     sync: typeof sync;
-    /** A simple task scheduler. */
     task: {
         /** Cancels a previously scheduled task. */
         cancel(handle: future): void;
@@ -154,11 +196,7 @@ export declare const core: {
             script: Function;
         };
     };
-    /** Moves or copies a file or folder to a new destination. */
     transfer: typeof transfer;
-    /** Imports the specified type from java. */
     type: typeof type;
-    /** Unzips the input stream's archive (if any) to a new destination. */
     unzip: typeof unzip;
 };
-export {};
