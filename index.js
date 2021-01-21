@@ -617,6 +617,36 @@ function unzip(from, to) {
     });
 }
 exports.unzip = unzip;
+/** @deprecated */
+exports.core = {
+    array,
+    chain,
+    console: exports.dev,
+    data,
+    dev: exports.dev,
+    fetch,
+    file,
+    format: exports.format,
+    meta: {
+        hook(script) {
+            Core.hook(script);
+        },
+        push(script) {
+            Core.push(script);
+        },
+        root: exports.root,
+        sync
+    },
+    reload,
+    root: exports.root,
+    simplify,
+    session: exports.session,
+    sync,
+    task: exports.task,
+    transfer,
+    type,
+    unzip
+};
 chain(void 0, (none, next) => {
     Core.push(next);
     for (const task of exports.session.task.list) {
@@ -698,33 +728,3 @@ Object.assign(globalThis, {
     },
     window: globalThis
 });
-/** @deprecated */
-exports.core = {
-    array,
-    chain,
-    console: exports.dev,
-    data,
-    dev: exports.dev,
-    fetch,
-    file,
-    format: exports.format,
-    meta: {
-        hook(script) {
-            Core.hook(script);
-        },
-        push(script) {
-            Core.push(script);
-        },
-        root: exports.root,
-        sync
-    },
-    reload,
-    root: exports.root,
-    simplify,
-    session: exports.session,
-    sync,
-    task: exports.task,
-    transfer,
-    type,
-    unzip
-};

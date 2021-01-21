@@ -656,6 +656,37 @@ export function unzip (from: jiInputStream, to: string | record | jiFile) {
    });
 }
 
+/** @deprecated */
+export const core = {
+   array,
+   chain,
+   console: dev,
+   data,
+   dev,
+   fetch,
+   file,
+   format,
+   meta: {
+      hook (script: Function) {
+         Core.hook(script);
+      },
+      push (script: Function) {
+         Core.push(script);
+      },
+      root,
+      sync
+   },
+   reload,
+   root,
+   simplify,
+   session,
+   sync,
+   task,
+   transfer,
+   type,
+   unzip
+};
+
 chain(void 0, (none, next) => {
    Core.push(next);
    for (const task of session.task.list) {
@@ -763,34 +794,3 @@ Object.assign(globalThis, {
    },
    window: globalThis
 });
-
-/** @deprecated */
-export const core = {
-   array,
-   chain,
-   console: dev,
-   data,
-   dev,
-   fetch,
-   file,
-   format,
-   meta: {
-      hook (script: Function) {
-         Core.hook(script);
-      },
-      push (script: Function) {
-         Core.push(script);
-      },
-      root,
-      sync
-   },
-   reload,
-   root,
-   simplify,
-   session,
-   sync,
-   task,
-   transfer,
-   type,
-   unzip
-};
