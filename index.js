@@ -487,9 +487,17 @@ exports.format = {
                         })
                     ].join(', ')} }`;
                 case '[object Function]':
-                    return object.toString().replace(/\r/g, '');
+                    if (object instanceof Class && typeof object.getCanonicalName === 'function') {
+                        return object.getCanonicalName();
+                    }
+                    else if (typeof object.toString === 'function') {
+                        return object.toString().replace(/\r/g, '');
+                    }
+                    else {
+                        return `${object}` || 'function () { [native code] }';
+                    }
                 case '[foreign HostFunction]':
-                    return 'function () { [native code] }';
+                    return 'hostFunction () { [native code] }';
                 default:
                     const list = array(object);
                     if (list) {
