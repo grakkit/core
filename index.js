@@ -435,7 +435,7 @@ exports.format = {
                     case '[object Function]':
                         return type.split(' ')[1].slice(0, -1);
                     case '[foreign HostObject]':
-                        if (object instanceof Class) {
+                        if (object instanceof Class && typeof object.getCanonicalName === 'function') {
                             return object.getCanonicalName();
                         }
                         else if (typeof object.toString === 'function') {
@@ -445,11 +445,11 @@ exports.format = {
                             }
                         }
                         const clazz = typeof object.getClass === 'function' ? object.getClass() : object.class;
-                        if (clazz instanceof Class) {
+                        if (clazz instanceof Class && typeof clazz.getCanonicalName === 'function') {
                             return clazz.getCanonicalName();
                         }
                         else {
-                            return `${object}` || 'Object';
+                            return `${object}` || `${clazz}` || 'Object';
                         }
                     case '[foreign HostFunction]':
                         return 'Function';
