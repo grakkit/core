@@ -67,11 +67,13 @@ export type response = {
 /** A session container for this module. */
 export const session: {
    data: Map<string, any>;
+   load: Map<string, any>;
    poly: { index: number; list: Map<number, future> };
    task: { list: Set<future>; tick: number };
    type: Map<keyof types, any>;
 } = {
    data: new Map(),
+   load: new Map(),
    poly: { index: 0, list: new Map() },
    task: { list: new Set(), tick: 0 },
    type: new Map()
@@ -544,6 +546,22 @@ export const format = {
       }
    }
 };
+
+/** Imports classes from external files. */
+export function load (path: string | record | jiFile, name: string) {
+   if (session.load.has(name)) {
+      return session.load.get(name);
+   } else {
+      const source = file(path);
+      if (source.exists) {
+         const value = Core.load(source.io, name);
+         session.load.set(name, value);
+         return value;
+      } else {
+         throw new ReferenceError(`The file "${source.path}" does not exist!`);
+      }
+   }
+}
 
 /** Reloads the JS environment. */
 export function reload () {

@@ -66,6 +66,7 @@ export declare type response = {
 /** A session container for this module. */
 export declare const session: {
     data: Map<string, any>;
+    load: Map<string, any>;
     poly: {
         index: number;
         list: Map<number, future>;
@@ -104,6 +105,8 @@ export declare const format: {
     /** A pretty-printer for JavaScript objects. */
     output(object: any, condense?: boolean): string;
 };
+/** Imports classes from external files. */
+export declare function load(path: string | record | jiFile, name: string): any;
 /** Reloads the JS environment. */
 export declare function reload(): void;
 /** The root folder of the environment. */
@@ -169,6 +172,7 @@ export declare const core: {
     simplify: typeof simplify;
     session: {
         data: Map<string, any>;
+        load: Map<string, any>;
         poly: {
             index: number;
             list: Map<number, future>;

@@ -1,10 +1,11 @@
 "use strict";
 /// <reference path="./env" />
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.core = exports.unzip = exports.transfer = exports.task = exports.sync = exports.simplify = exports.root = exports.reload = exports.format = exports.file = exports.fetch = exports.dev = exports.data = exports.chain = exports.array = exports.type = exports.session = void 0;
+exports.core = exports.unzip = exports.transfer = exports.task = exports.sync = exports.simplify = exports.root = exports.reload = exports.load = exports.format = exports.file = exports.fetch = exports.dev = exports.data = exports.chain = exports.array = exports.type = exports.session = void 0;
 /** A session container for this module. */
 exports.session = {
     data: new Map(),
+    load: new Map(),
     poly: { index: 0, list: new Map() },
     task: { list: new Set(), tick: 0 },
     type: new Map()
@@ -510,6 +511,24 @@ exports.format = {
         }
     }
 };
+/** Imports classes from external files. */
+function load(path, name) {
+    if (exports.session.load.has(name)) {
+        return exports.session.load.get(name);
+    }
+    else {
+        const source = file(path);
+        if (source.exists) {
+            const value = Core.load(source.io, name);
+            exports.session.load.set(name, value);
+            return value;
+        }
+        else {
+            throw new ReferenceError(`The file "${source.path}" does not exist!`);
+        }
+    }
+}
+exports.load = load;
 /** Reloads the JS environment. */
 function reload() {
     Core.push(Core.swap);
