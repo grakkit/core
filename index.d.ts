@@ -107,6 +107,10 @@ export declare const format: {
 };
 /** Imports classes from external files. */
 export declare function load(path: string | record | jiFile, name: string): any;
+export declare const regex: {
+    test(input: string, expression: string): any;
+    replace(input: string, expression: string, replacement: string): string;
+};
 /** Reloads the JS environment. */
 export declare function reload(): void;
 /** The root folder of the environment. */
@@ -163,11 +167,16 @@ export declare const core: {
     };
     meta: {
         hook(script: Function): void;
+        load(path: string | record | jiFile, name: string): any;
         push(script: Function): void;
         root: record;
         sync: typeof sync;
     };
     reload: typeof reload;
+    regex: {
+        test(input: string, expression: string): any;
+        replace(input: string, expression: string, replacement: string): string;
+    };
     root: record;
     simplify: typeof simplify;
     session: {

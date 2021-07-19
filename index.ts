@@ -1,4 +1,4 @@
-/// <reference path="./env" />
+/// <reference path="./env.d.ts" />
 
 import { types } from './types';
 import { jiFile, jiInputStream, jnHttpURLConnection, juzZipEntry } from '@grakkit/core-classes';
@@ -97,6 +97,7 @@ const Iterable = type('java.lang.Iterable');
 const Iterator = type('java.util.Iterator');
 const JavaString = type('java.lang.String');
 const Paths = type('java.nio.file.Paths');
+const Pattern = type('java.util.regex.Pattern');
 const Scanner = type('java.util.Scanner');
 const Spliterator = type('java.util.Spliterator');
 const StandardCopyOption = type('java.nio.file.StandardCopyOption');
@@ -251,7 +252,7 @@ export const dev = {
                   property ? (valid = false) : (body = '');
                   break;
                default:
-                  if (char.match(/[\+\-\*\/\^=!&\|\?:\(,;]/g)) {
+                  if (regex.test(char, '[\\+\\-\\*\\/\\^=!&\\|\\?:\\(,;]')) {
                      if (!bracket) {
                         body = input.slice(0, index + 1);
                         scope = globalThis;
@@ -268,11 +269,11 @@ export const dev = {
          scope === globalThis && !properties.includes('self') && properties.push('self');
          return properties
             .sort()
-            .filter((element) => element.toLowerCase().includes(property.toLowerCase()))
-            .filter((name) => bracket || name === (name.match(/[_A-Z$][_0-9A-Z$]*/gi) || [])[0])
-            .map((name) => {
+            .filter(element => element.toLowerCase().includes(property.toLowerCase()))
+            .filter(name => bracket || regex.test(name, '[_A-Za-z$][_0-9A-Za-z$]*'))
+            .map(name => {
                if (bracket) {
-                  return `${body}\`${name.replace(/`/g, '\\`').split('\\').join('\\\\')}\`]`;
+                  return `${body}\`${regex.replace(name, '`', '\\`').split('\\').join('\\\\')}\`]`;
                } else {
                   return `${body}${name}`;
                }
@@ -335,7 +336,7 @@ export function file (path: string | record | jiFile, ...more: string[]) {
    const io = Paths.get(path, ...more).normalize().toFile();
    const thing: record = {
       get children () {
-         return thing.type === 'folder' ? [ ...io.listFiles() ].map((sub) => file(sub.getPath())) : null;
+         return thing.type === 'folder' ? [ ...io.listFiles() ].map(sub => file(sub.getPath())) : null;
       },
       directory () {
          if (thing.type === 'none') {
@@ -383,7 +384,7 @@ export function file (path: string | record | jiFile, ...more: string[]) {
          return thing.file('..');
       },
       get path () {
-         return io.getPath().replace(/(\\)/g, '/');
+         return regex.replace(io.getPath(), '(\\\\)', '/');
       },
       //@ts-expect-error
       read (async?: boolean) {
@@ -431,7 +432,7 @@ export const format = {
                   if (message.startsWith('invokeMember') || message.startsWith('execute on foreign object')) {
                      const reason = message.split('failed due to: ')[1];
                      if (reason.startsWith('no applicable overload found')) {
-                        const sets = reason.split('overloads:')[1].split(']],')[0].split(')]').map((set) => {
+                        const sets = reason.split('overloads:')[1].split(']],')[0].split(')]').map(set => {
                            return `(${set.split('(').slice(1).join('(')})`;
                         });
                         message = [ 'Invalid arguments! Expected:', ...sets ].join('\n -> ').slice(0, -1);
@@ -515,10 +516,10 @@ export const format = {
                   .join(', ')} ]`;
             case '[object Object]':
                return `{ ${[
-                  ...Object.getOwnPropertyNames(object).map((key) => {
+                  ...Object.getOwnPropertyNames(object).map(key => {
                      return `${key}: ${format.output(object === object[key] ? circular : object[key], true)}`;
                   }),
-                  ...Object.getOwnPropertySymbols(object).map((key) => {
+                  ...Object.getOwnPropertySymbols(object).map(key => {
                      return `${format.output(key, true)}: ${format.output(
                         object === object[key] ? circular : object[key],
                         true
@@ -529,7 +530,7 @@ export const format = {
                if (object instanceof Class && typeof object.getCanonicalName === 'function') {
                   return object.getCanonicalName();
                } else if (typeof object.toString === 'function') {
-                  return object.toString().replace(/\r/g, '');
+                  return regex.replace(object.toString(), '\\r', '');
                } else {
                   return `${object}` || 'function () { [native code] }';
                }
@@ -562,6 +563,17 @@ export function load (path: string | record | jiFile, name: string) {
       }
    }
 }
+
+export const regex = {
+   test (input: string, expression: string) {
+      //@ts-expect-error
+      return input.matches(expression);
+   },
+   replace (input: string, expression: string, replacement: string) {
+      //@ts-expect-error
+      return Pattern.compile(expression).matcher(input).replaceAll(replacement);
+   }
+};
 
 /** Reloads the JS environment. */
 export function reload () {
@@ -694,6 +706,9 @@ export const core = {
       hook (script: Function) {
          Core.hook(script);
       },
+      load (path: string | record | jiFile, name: string) {
+         return Core.load(typeof path === 'string' ? file(path).io : 'io' in path ? path.io : path, name);
+      },
       push (script: Function) {
          Core.push(script);
       },
@@ -701,6 +716,7 @@ export const core = {
       sync
    },
    reload,
+   regex,
    root,
    simplify,
    session,
@@ -740,7 +756,7 @@ const promise = Promise.resolve();
 
 Object.assign(globalThis, {
    atob (data: string) {
-      var str = String(data).replace(/[=]+$/, '');
+      var str = regex.replace(String(data), '[=]+$', '');
       if (str.length % 4 === 1) {
          throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
       }
@@ -781,7 +797,7 @@ Object.assign(globalThis, {
    },
    global: globalThis,
    queueMicrotask (callback: () => void) {
-      promise.then(callback).catch((error) => {
+      promise.then(callback).catch(error => {
          task.timeout(() => {
             throw error;
          });

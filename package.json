@@ -11,8 +11,9 @@
       "access": "public"
    },
    "scripts": {
-      "build": "tsc --watch"
+      "build": "tsc --watch",
+      "garbo1234": "npm publish"
    },
    "types": "index.d.ts",
-   "version": "3.2.7"
+   "version": "3.2.9"
 }

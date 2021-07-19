@@ -1,7 +1,7 @@
 "use strict";
-/// <reference path="./env" />
+/// <reference path="./env.d.ts" />
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.core = exports.unzip = exports.transfer = exports.task = exports.sync = exports.simplify = exports.root = exports.reload = exports.load = exports.format = exports.file = exports.fetch = exports.dev = exports.data = exports.chain = exports.array = exports.type = exports.session = void 0;
+exports.core = exports.unzip = exports.transfer = exports.task = exports.sync = exports.simplify = exports.root = exports.reload = exports.regex = exports.load = exports.format = exports.file = exports.fetch = exports.dev = exports.data = exports.chain = exports.array = exports.type = exports.session = void 0;
 /** A session container for this module. */
 exports.session = {
     data: new Map(),
@@ -29,6 +29,7 @@ const Iterable = type('java.lang.Iterable');
 const Iterator = type('java.util.Iterator');
 const JavaString = type('java.lang.String');
 const Paths = type('java.nio.file.Paths');
+const Pattern = type('java.util.regex.Pattern');
 const Scanner = type('java.util.Scanner');
 const Spliterator = type('java.util.Spliterator');
 const StandardCopyOption = type('java.nio.file.StandardCopyOption');
@@ -195,7 +196,7 @@ exports.dev = {
                         property ? (valid = false) : (body = '');
                         break;
                     default:
-                        if (char.match(/[\+\-\*\/\^=!&\|\?:\(,;]/g)) {
+                        if (exports.regex.test(char, '[\\+\\-\\*\\/\\^=!&\\|\\?:\\(,;]')) {
                             if (!bracket) {
                                 body = input.slice(0, index + 1);
                                 scope = globalThis;
@@ -213,11 +214,11 @@ exports.dev = {
             scope === globalThis && !properties.includes('self') && properties.push('self');
             return properties
                 .sort()
-                .filter((element) => element.toLowerCase().includes(property.toLowerCase()))
-                .filter((name) => bracket || name === (name.match(/[_A-Z$][_0-9A-Z$]*/gi) || [])[0])
-                .map((name) => {
+                .filter(element => element.toLowerCase().includes(property.toLowerCase()))
+                .filter(name => bracket || exports.regex.test(name, '[_A-Za-z$][_0-9A-Za-z$]*'))
+                .map(name => {
                 if (bracket) {
-                    return `${body}\`${name.replace(/`/g, '\\`').split('\\').join('\\\\')}\`]`;
+                    return `${body}\`${exports.regex.replace(name, '`', '\\`').split('\\').join('\\\\')}\`]`;
                 }
                 else {
                     return `${body}${name}`;
@@ -285,7 +286,7 @@ function file(path, ...more) {
     const io = Paths.get(path, ...more).normalize().toFile();
     const thing = {
         get children() {
-            return thing.type === 'folder' ? [...io.listFiles()].map((sub) => file(sub.getPath())) : null;
+            return thing.type === 'folder' ? [...io.listFiles()].map(sub => file(sub.getPath())) : null;
         },
         directory() {
             if (thing.type === 'none') {
@@ -335,7 +336,7 @@ function file(path, ...more) {
             return thing.file('..');
         },
         get path() {
-            return io.getPath().replace(/(\\)/g, '/');
+            return exports.regex.replace(io.getPath(), '(\\\\)', '/');
         },
         //@ts-expect-error
         read(async) {
@@ -385,7 +386,7 @@ exports.format = {
                         if (message.startsWith('invokeMember') || message.startsWith('execute on foreign object')) {
                             const reason = message.split('failed due to: ')[1];
                             if (reason.startsWith('no applicable overload found')) {
-                                const sets = reason.split('overloads:')[1].split(']],')[0].split(')]').map((set) => {
+                                const sets = reason.split('overloads:')[1].split(']],')[0].split(')]').map(set => {
                                     return `(${set.split('(').slice(1).join('(')})`;
                                 });
                                 message = ['Invalid arguments! Expected:', ...sets].join('\n -> ').slice(0, -1);
@@ -480,10 +481,10 @@ exports.format = {
                         .join(', ')} ]`;
                 case '[object Object]':
                     return `{ ${[
-                        ...Object.getOwnPropertyNames(object).map((key) => {
+                        ...Object.getOwnPropertyNames(object).map(key => {
                             return `${key}: ${exports.format.output(object === object[key] ? circular : object[key], true)}`;
                         }),
-                        ...Object.getOwnPropertySymbols(object).map((key) => {
+                        ...Object.getOwnPropertySymbols(object).map(key => {
                             return `${exports.format.output(key, true)}: ${exports.format.output(object === object[key] ? circular : object[key], true)}`;
                         })
                     ].join(', ')} }`;
@@ -492,7 +493,7 @@ exports.format = {
                         return object.getCanonicalName();
                     }
                     else if (typeof object.toString === 'function') {
-                        return object.toString().replace(/\r/g, '');
+                        return exports.regex.replace(object.toString(), '\\r', '');
                     }
                     else {
                         return `${object}` || 'function () { [native code] }';
@@ -529,6 +530,16 @@ function load(path, name) {
     }
 }
 exports.load = load;
+exports.regex = {
+    test(input, expression) {
+        //@ts-expect-error
+        return input.matches(expression);
+    },
+    replace(input, expression, replacement) {
+        //@ts-expect-error
+        return Pattern.compile(expression).matcher(input).replaceAll(replacement);
+    }
+};
 /** Reloads the JS environment. */
 function reload() {
     Core.push(Core.swap);
@@ -658,6 +669,9 @@ exports.core = {
         hook(script) {
             Core.hook(script);
         },
+        load(path, name) {
+            return Core.load(typeof path === 'string' ? file(path).io : 'io' in path ? path.io : path, name);
+        },
         push(script) {
             Core.push(script);
         },
@@ -665,6 +679,7 @@ exports.core = {
         sync
     },
     reload,
+    regex: exports.regex,
     root: exports.root,
     simplify,
     session: exports.session,
@@ -702,7 +717,7 @@ const circular = Symbol();
 const promise = Promise.resolve();
 Object.assign(globalThis, {
     atob(data) {
-        var str = String(data).replace(/[=]+$/, '');
+        var str = exports.regex.replace(String(data), '[=]+$', '');
         if (str.length % 4 === 1) {
             throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
         }
@@ -735,7 +750,7 @@ Object.assign(globalThis, {
     },
     global: globalThis,
     queueMicrotask(callback) {
-        promise.then(callback).catch((error) => {
+        promise.then(callback).catch(error => {
             exports.task.timeout(() => {
                 throw error;
             });
